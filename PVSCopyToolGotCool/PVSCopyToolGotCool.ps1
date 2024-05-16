@@ -127,6 +127,7 @@ foreach ($server in $pvsServers) {
 
         $serverDetails += [PSCustomObject]@{
             ServerName = $server.Name
+            StoreName = $store.StoreName
             StorePath = $uncPath
         }
     }
@@ -156,6 +157,7 @@ foreach ($diskLocator in $diskLocators) {
             Mode = $mode
             DiskFileName = $vDiskVersion.DiskFileName
             IsMaintenance = ($vDiskVersion.Access -eq 1)
+            StoreName = $diskLocator.StoreName
         }
         # Check if Verbose is not enabled, then use Write-Host
         if ($VerbosePreference -ne 'Continue') {
@@ -163,9 +165,10 @@ foreach ($diskLocator in $diskLocators) {
         }
 
         # Always show detailed information when -Verbose is used
-        Write-Verbose "vDisk: $($vDiskVersion.Name), Version: $($vDiskVersion.Version), Mode: $mode, Disk File Name: $($vDiskVersion.DiskFileName), IsMaintenance: $($vDiskVersion.Access -eq 1)"
+        Write-Verbose "vDisk: $($vDiskVersion.Name), Version: $($vDiskVersion.Version), Mode: $mode, Disk File Name: $($vDiskVersion.DiskFileName), IsMaintenance: $($vDiskVersion.Access -eq 1), StoreName:$($diskLocator.StoreName)"
     }
 }
+
 
 Write-Host "`nChecking file presence on each server..."
 
@@ -177,7 +180,9 @@ foreach ($vDisk in $vDiskDetails) {
         continue
     }
 
-    foreach ($detail in $serverDetails) {
+    $serverDetailsFiltered = $serverDetails | Where-Object { $_.StoreName -eq $vDisk.StoreName }
+
+    foreach ($detail in $serverDetailsFiltered) {
         $vhdFilePath = Join-Path -Path $detail.StorePath -ChildPath $vDisk.DiskFileName
         $pvpFilePath = Join-Path -Path $detail.StorePath -ChildPath ($vDisk.DiskFileName.Replace('.vhdx', '').Replace('.avhdx', '') + '.pvp')
 
